@@ -71,7 +71,7 @@ const PatientHistory = ({ history }) => (
           </div>
           <div>
             <label className="block font-semibold">Doctor's Feedback <span className="text-red-600">*</span></label>
-            <textarea value={feedback} readOnly className="mt-1 w-full p-2 border rounded-lg bg-gray-100" />
+            <textarea value={feedback} readOnly={!isEditable} className="mt-1 w-full p-2 border rounded-lg bg-gray-100" />
           </div>
         </div>
       </section>
