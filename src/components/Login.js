@@ -7,24 +7,22 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
-    // Simulate an API request with a timeout
-    setTimeout(() => {
-      // Generate a fake JWT token (random string)
-      const fakeJwtToken = `jwt-token-${Math.random().toString(36).substring(2, 15)}`;
-      
-      // Call the login function from the context
-      login(fakeJwtToken);
-
+    try {
+      await login(username, password);  // Call login API with username & password
       setLoading(false);
-
-      navigate("/reports")
-    }, 2000); // Simulate a 2-second API call
+      navigate("/reports");
+    } catch (error) {
+      setLoading(false);
+      setError(error.message || 'Login failed');
+    }
   };
 
   return (
@@ -48,6 +46,7 @@ const Login = () => {
         {/* Right Side with Login Form */}
         <div className="flex flex-col justify-center p-10 w-full md:w-1/2">
           <h2 className="text-3xl font-bold mb-4">Account Login</h2>
+          {error && <p className="text-red-600 mb-4">{error}</p>}
           <form onSubmit={handleLogin}>
             <div className="mb-4">
               <label className="block text-gray-700">Username</label>

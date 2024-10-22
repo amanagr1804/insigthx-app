@@ -24,7 +24,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-lg py-4 px-6 flex justify-between items-center">
+    <nav className="bg-white shadow-lg py-4 px-6 flex justify-between items-center z-30">
       {/* Left Section: Logo */}
       <div className="flex items-center cursor-pointer" onClick={()=>{
         navigate("/reports")
@@ -43,7 +43,7 @@ export default function Navbar() {
         <FaBell className="h-6 w-6 text-gray-600 cursor-pointer" />
 
         {/* Profile Dropdown */}
-        <Menu as="div" className="relative inline-block text-left">
+        <Menu as="div" className="relative inline-block text-left z-30">
           <div>
             <Menu.Button className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700">
               <FaUserCircle className="h-6 w-6 text-gray-600" />

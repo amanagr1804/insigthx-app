@@ -1,12 +1,32 @@
-import React, { useState } from 'react';
-import templatesData from './templates.json'; // Dummy data for templates
+import React, { useState, useEffect } from 'react';
+import { useLogin } from '../context/LoginContext'; // Import Login context
 
 const TemplatesPage = () => {
-  const [templates, setTemplates] = useState(templatesData); // State for all templates
-  const [editingIndex, setEditingIndex] = useState(null);    // State for editing a template
-  const [editedTemplate, setEditedTemplate] = useState(null);// State for edited template
+  const [templates, setTemplates] = useState([]); // State for all templates
+  const [editingIndex, setEditingIndex] = useState(null); // State for editing a template
+  const [editedTemplate, setEditedTemplate] = useState(null); // State for edited template
   const [isAddingTemplate, setIsAddingTemplate] = useState(false); // State to manage adding template
   const [newTemplate, setNewTemplate] = useState({ heading: '', findings: [], impression: '' }); // State for the new template
+  const { jwtToken } = useLogin(); // Get JWT token from Login context
+
+  // Fetch templates on component mount
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('http://34.234.93.29/templates', {
+          headers: {
+            Authorization: `Bearer ${jwtToken}`, // Attach JWT token
+          },
+        });
+        const data = await response.json();
+        setTemplates(data.templates);
+      } catch (error) {
+        console.error('Error fetching templates:', error);
+      }
+    };
+
+    fetchTemplates(); // Call the function to fetch templates
+  }, [jwtToken]);
 
   // Handle editing a template
   const handleEditClick = (index) => {
@@ -15,20 +35,48 @@ const TemplatesPage = () => {
   };
 
   // Handle saving a template after editing
-  const handleSaveClick = () => {
-    const updatedTemplates = [...templates];
-    updatedTemplates[editingIndex] = editedTemplate;
-    setTemplates(updatedTemplates);
-    setEditingIndex(null);
-    setEditedTemplate(null);
+  const handleSaveClick = async () => {
+    const updatedTemplate = editedTemplate;
+    try {
+      await fetch(`http://34.234.93.29/templates/${updatedTemplate.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwtToken}`, // Attach JWT token
+        },
+        body: JSON.stringify(updatedTemplate),
+      });
+
+      const updatedTemplates = [...templates];
+      updatedTemplates[editingIndex] = updatedTemplate;
+      setTemplates(updatedTemplates);
+      setEditingIndex(null);
+      setEditedTemplate(null);
+    } catch (error) {
+      console.error('Error saving template:', error);
+    }
   };
 
   // Handle adding a new template
-  const handleAddTemplate = () => {
-    const updatedTemplates = [...templates, newTemplate];
-    setTemplates(updatedTemplates);
-    setNewTemplate({ heading: '', findings: [], impression: '' }); // Reset form fields
-    setIsAddingTemplate(false);
+  const handleAddTemplate = async () => {
+    try {
+      const response = await fetch('http://34.234.93.29/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwtToken}`, // Attach JWT token
+        },
+        body: JSON.stringify(newTemplate),
+      });
+
+      const addedTemplate = await response.json();
+      const updatedTemplates = [...templates, addedTemplate];
+      setTemplates(updatedTemplates);
+      setNewTemplate({ heading: '', findings: [], impression: '' }); // Reset form fields
+      setIsAddingTemplate(false);
+    } catch (error) {
+      console.error('Error adding template:', error);
+    }
   };
 
   return (

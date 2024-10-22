@@ -4,67 +4,50 @@ import Drawer from 'react-modern-drawer';
 import 'react-modern-drawer/dist/index.css';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
-
-const generateReportsData = (count) => {
-  const reports = [];
-  const xrayImages = [
-    'https://i.imgur.com/1bX5QH6.jpg',
-    'https://i.imgur.com/3g7nmJC.jpg',
-    'https://i.imgur.com/oYiTqum.jpg'
-  ];
-  for (let i = 1; i <= count; i++) {
-    reports.push({
-      id: `00978${i.toString().padStart(3, '0')}-2024-10`,
-      status: i % 3 === 0 ? 'Pending' : i % 2 === 0 ? 'Complete' : 'Duplicate',
-      patientName: `Patient ${i}`,
-      gender: i % 2 === 0 ? 'Male' : 'Female',
-      age: `${20 + (i % 50)}Y`,
-      uploadTime: `14-10-2024 18:${i % 60}:${i % 60}`,
-      timezone: 'Asia/Kolkata',
-      location: 'USMANPURA IMAGING CENTRE',
-      bodyPart: 'X-RAY CHEST',
-      isChest: true,
-      xrayFiles: [
-        { imageUrl: xrayImages[i % 3] },
-        {},
-        {}
-      ],
-      history: 'COLD COUGH BREATHLESSNESS',
-      reportTemplate: 'Chest Normal',
-      findings: [
-        'Haziness noted in left lower lung zone, p/o pleural effusion',
-        'Rest of the lung fields display a normal appearance with no evident abnormalities.',
-        'Trachea and mediastinum are in a normal position without any deviation.',
-        'Both hila are symmetrical and of normal size.',
-        'The transverse cardiac diameter is within normal limits.',
-        'Great vessels show no signs of abnormalities.',
-        'Right costophrenic angles appear clear, and diaphragms are in a normal position and contour.',
-        'The bony rib cage and soft tissue shadows appear normal.'
-      ],
-      impression: 'Haziness in left lower lung zone, p/o pleural effusion',
-      doctor_feedback: 'history?',
-      createdOn: `${i % 24} h ago`
-    });
-  }
-  return reports;
-};
+import { useLogin } from '../context/LoginContext'; // Use login context to get JWT token
 
 const AllReportsPage = () => {
   const navigate = useNavigate();
+  const { jwtToken } = useLogin(); // Get JWT token from login context
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const reportsPerPage = 10;
-  const reportsData = generateReportsData(100);
+  const [reportsData, setReportsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    console.log("reportsData",reportsData)
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchReports = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch('http://34.234.93.29/reports', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${jwtToken}`, // Add JWT token in Authorization header
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch reports');
+        }
+
+        const data = await response.json();
+        setReportsData(data.reports); // Assuming API response has `reports` array
+      } catch (err) {
+        setError(err.message || 'Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (jwtToken) {
+      fetchReports(); // Fetch reports only if JWT token is available
+    }
+  }, [jwtToken]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -108,19 +91,27 @@ const AllReportsPage = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex">
       <Drawer
         open={sidebarOpen}
         onClose={toggleSidebar}
         direction="left"
-        style={{background:"#1f2937"}}
+        style={{ background: "#1f2937" }}
         className="p-6 bg-gray-800 text-white w-64"
       >
         <button onClick={toggleSidebar} className="text-xl mb-4">Close Sidebar</button>
         <ul>
           <li className="mb-4 cursor-pointer" onClick={() => navigate('/reports')}>Reports</li>
-          <li className="mb-4 cursor-pointer" onClick={()=> navigate('/templates')}>Templates</li>
+          <li className="mb-4 cursor-pointer" onClick={() => navigate('/templates')}>Templates</li>
           <li className="mb-4 cursor-pointer">Profile</li>
         </ul>
       </Drawer>
@@ -149,32 +140,42 @@ const AllReportsPage = () => {
         </header>
 
         <section className="bg-white p-6 rounded-lg shadow">
-          <table className="w-full">
+          <table className="w-full border-collapse table-fixed">
             <thead>
-              <tr className="text-left text-gray-600">
-                <th className="p-3">ID</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Patient Name</th>
-                <th className="p-3">Gender</th>
-                <th className="p-3">Age</th>
-                <th className="p-3">Upload Time</th>
-                <th className="p-3">Created On</th>
+              <tr className="bg-blue-800 text-white text-left">
+                <th className="p-3 text-center">Sr.no</th>
+                <th className="p-3">Date & upload time</th>
+                <th className="p-3">Patient ID</th>
+                <th className="p-3">Patient name</th>
+                <th className="p-3">Age/Sex</th>
+                <th className="p-3">Location/center</th>
+                <th className="p-3">Body part (X-ray)</th>
+                <th className="p-3">Status of report</th>
+                <th className="p-3">dr.name</th>
+                <th className="p-3">Download</th>
+                <th className="p-3">Misc/ can think about this or ignore</th>
               </tr>
             </thead>
             <tbody>
               {paginatedReports.map((report, index) => (
-                <tr key={index} onClick={() => navigate('/patient-details', { state: report })} className="cursor-pointer hover:bg-gray-100">
-                  <td className="p-3 text-blue-600 underline">{report.id}</td>
-                  <td className="p-3">
-                    <span className={`flex items-center ${report.status === 'Complete' ? 'text-green-600' : 'text-gray-600'}`}>
+                <tr key={index} onClick={() => navigate('/patient-details', { state: report._id })} className="cursor-pointer hover:bg-gray-100">
+                  <td className="p-3 text-center">{index + 1}</td>
+                  <td className="p-3 text-center">{report.uploadTime}</td>
+                  <td className="p-3 text-center text-blue-600 underline">Click to open xray</td>
+                  <td className="p-3 text-center">{report.patientName}</td>
+                  <td className="p-3 text-center">{report.age}/{report.gender}</td>
+                  <td className="p-3 text-center">{report.location}</td>
+                  <td className="p-3 text-center">{report.bodyPart}</td>
+                  <td className="p-3 text-center">
+                    <span className={`flex items-center justify-center ${report.status === 'Complete' ? 'text-green-600' : 'text-gray-600'}`}>
                       <FaCheckCircle className="mr-2" /> {report.status}
                     </span>
                   </td>
-                  <td className="p-3">{report.patientName}</td>
-                  <td className="p-3">{report.gender}</td>
-                  <td className="p-3">{report.age}</td>
-                  <td className="p-3">{report.uploadTime}</td>
-                  <td className="p-3">{report.createdOn}</td>
+                  <td className="p-3 text-center">{report.patientName}</td>
+                  <td className="p-3 text-center">
+                    <button className="bg-gray-200 text-gray-700 py-1 px-2 rounded-lg">Download</button>
+                  </td>
+                  <td className="p-3 text-center">{report.history}</td>
                 </tr>
               ))}
             </tbody>
